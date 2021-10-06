@@ -5,6 +5,8 @@ using Moq;
 using Core.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PersonalPhotos.Models;
+using System.Threading.Tasks;
 
 namespace PersonalPhotos.Test
 {
@@ -24,6 +26,14 @@ namespace PersonalPhotos.Test
         {
             var result = (_controller.Index() as ViewResult);
             Assert.NotNull(result);
+            Assert.Equal("Login", result.ViewName, ignoreCase: true);
+        }
+
+        [Fact]
+        public async Task Login_GivenModelStateInvalid_ReturnLoginView()
+        {
+            _controller.ModelState.AddModelError("Test", "Test");
+            var result = (await _controller.Login(Mock.Of<LoginViewModel>()) as ViewResult);
             Assert.Equal("Login", result.ViewName, ignoreCase: true);
         }
     }
