@@ -1,12 +1,12 @@
-using PersonalPhotos.Controllers;
-using System;
-using Xunit;
-using Moq;
 using Core.Interfaces;
+using Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
+using PersonalPhotos.Controllers;
 using PersonalPhotos.Models;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace PersonalPhotos.Test
 {
@@ -18,7 +18,11 @@ namespace PersonalPhotos.Test
         public LoginsTests()
         {
             _logins = new Mock<ILogins>();
+
+            var session = Mock.Of<ISession>();
+            var httpContext = Mock.Of<HttpContext>(x => x.Session == session);
             _accessor = new Mock<IHttpContextAccessor>();
+            _accessor.Setup(x => x.HttpContext).Returns(httpContext);
             _controller = new LoginsController(_logins.Object, _accessor.Object);
         }
         [Fact]
@@ -34,6 +38,28 @@ namespace PersonalPhotos.Test
         {
             _controller.ModelState.AddModelError("Test", "Test");
             var result = (await _controller.Login(Mock.Of<LoginViewModel>()) as ViewResult);
+            Assert.Equal("Login", result.ViewName, ignoreCase: true);
+        }
+
+        [Fact]
+        public async Task Login_GivenCorrectPassword_ReturnToDisplayAction()
+        {
+            const string password = "admin";
+            var modelView = Mock.Of<LoginViewModel>(x => x.Email == "a@b.com" && x.Password == password);
+            var model = Mock.Of<User>(x => x.Password == password);
+            _logins.Setup(x => x.GetUser(It.IsAny<string>())).ReturnsAsync(model);
+            var result = await _controller.Login(modelView);
+            Assert.IsType<RedirectToActionResult>(result);
+        }
+
+        [Fact]
+        public async Task Login_GivenWrongPassword_ReturnToLogin()
+        {
+            const string password = "admins";
+            var modelView = Mock.Of<LoginViewModel>(x => x.Email == "a@b.com" && x.Password == "admin");
+            var model = Mock.Of<User>(x => x.Password == password);
+            _logins.Setup(x => x.GetUser(It.IsAny<string>())).ReturnsAsync(model);
+            var result = (await _controller.Login(modelView) as ViewResult);
             Assert.Equal("Login", result.ViewName, ignoreCase: true);
         }
     }
